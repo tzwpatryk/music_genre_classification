@@ -10,7 +10,6 @@ with open('model.json', 'r') as json_file:
 
 model_j = tf.keras.models.model_from_json(json_savedModel)
 model_j.load_weights('model_weights.h5')
-
 st.set_page_config(page_title='The Machine Learning App', layout='wide')
 
 with st.subheader('1. Upload your song in wav format:'):
