@@ -1,47 +1,76 @@
-import tensorflow as tf
+import os
 import streamlit as st
+import matplotlib.pyplot as plt
+from pydub import AudioSegment
+from xgboost import XGBClassifier
 import librosa
 import librosa.display
-import matplotlib.pyplot as plt
-import numpy as np
 
-with open('model.json', 'r') as json_file:
-    json_savedModel = json_file.read()
 
-model_j = tf.keras.models.model_from_json(json_savedModel)
-model_j.load_weights('model_weights.h5')
+def extract_features(y, sr):
+    chroma = librosa.feature.chroma_stft(y=y, sr=sr)
+    chroma_mean = chroma.mean()
+    chroma_var = chroma.var()
+
+    rms = librosa.feature.rms(y=y)
+    rms_mean = rms.mean()
+    rms_var = rms.var()
+
+    cent = librosa.feature.spectral_centroid(y=y, sr=sr)
+    cent_mean = cent.mean()
+    cent_var = cent.var()
+
+    spec_bw = librosa.feature.spectral_bandwidth(y=y, sr=sr)
+    spec_bw_mean = spec_bw.mean()
+    spec_bw_var = spec_bw.var()
+
+    rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr)
+    rolloff_mean = rolloff.mean()
+    rolloff_var = rolloff.var()
+
+    zero = librosa.feature.zero_crossing_rate(y)
+    zero_mean = zero.mean()
+    zero_var = zero.var()
+
+    onset_env = librosa.onset.onset_strength(y=y, sr=sr)
+    tempo = librosa.beat.tempo(onset_envelope=onset_env, sr=sr)[0]
+
+    mfcc = librosa.feature.mfcc(y=y, sr=sr)
+    mfcc_mean = mfcc.mean()
+    mfcc_var = mfcc.var()
+
+    return [[chroma_mean, chroma_var, rms_mean, rms_var, cent_mean, cent_var, spec_bw_mean, spec_bw_var, rolloff_mean, rolloff_var, zero_mean, zero_var, tempo, mfcc_mean, mfcc_var]]
+
+
 st.set_page_config(page_title='The Machine Learning App', layout='wide')
 
-with st.subheader('1. Upload your song in wav format:'):
-    uploaded_file = st.file_uploader('Upload your input wav file', type=['wav'])
+modelxgb = XGBClassifier()
+modelxgb.load_model('modelxgb.json')
+
+with st.header('1. Upload your song in wav or mp3 format:'):
+    uploaded_file = st.file_uploader('Upload your input wav or mp3 file', type=['mp3', 'wav'])
 
 if uploaded_file is not None:
-    fig, ax = plt.subplots()
-    y, sr = librosa.load(uploaded_file)
-    S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmax=8000)
-    plt.axis('off')
-    S_dB = librosa.power_to_db(S, ref=np.max)
-    img = librosa.display.specshow(S_dB, x_axis='time', y_axis='mel', sr=sr, fmax=8000, ax=ax)
-    plt.savefig('img.png')
-try:
-    test_image = tf.keras.utils.load_img('img.png', target_size=(432, 288))
-    test_image = tf.keras.utils.img_to_array(test_image)
-    test_image = np.expand_dims(test_image, axis=0)
-except FileNotFoundError:
-    test_image = tf.keras.utils.load_img('images_original/blues/blues00000.png', target_size=(432, 288))
-    test_image = tf.keras.utils.img_to_array(test_image)
-    test_image = np.expand_dims(test_image, axis=0)
+    if uploaded_file.name.endswith('.mp3'):
+        sound = AudioSegment.from_mp3(uploaded_file)
+        sound.export('uploaded.wav', format="wav")
+        y, sr = librosa.load('uploaded.wav')
+        os.remove('uploaded.wav')
+    else:
+        y, sr = librosa.load(uploaded_file)
+    features = extract_features(y, sr)
 
-prediction = model_j.predict(test_image)
+    y_pred = modelxgb.predict_proba(features)[0]
 
 class_names = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
 
-prob_list = np.array(tf.nn.softmax(prediction))[0]
-
-fig = plt.figure(figsize=(10,5))
-plt.bar(class_names, prob_list, color='maroon')
-
+fig, ax = plt.subplots(figsize=(10, 4))
+plt.bar(class_names, y_pred, color='maroon')
+fig.patch.set_facecolor('#0e1117')
+ax.set_facecolor('#0e1117')
+ax.spines['bottom'].set_color('white')
+ax.spines['left'].set_color('white')
+ax.spines['top'].set_color('#0e1117')
+ax.spines['right'].set_color('#0e1117')
+ax.tick_params(colors='white', which='both')
 st.pyplot(fig)
-
-
-
