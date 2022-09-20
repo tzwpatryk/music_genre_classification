@@ -1,1 +1,3 @@
 libsndfile1-dev
+libav-tools
+libavcodec-extra
