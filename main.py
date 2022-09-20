@@ -1,4 +1,5 @@
 import os
+import random
 import streamlit as st
 import matplotlib.pyplot as plt
 from pydub import AudioSegment
@@ -50,17 +51,31 @@ modelxgb.load_model('modelxgb.json')
 with st.header('1. Upload your song in wav or mp3 format:'):
     uploaded_file = st.file_uploader('Upload your input wav or mp3 file', type=['mp3', 'wav'])
 
+songfile = 'blues00067.wav'
+y, sr = librosa.load(songfile)
+if st.button('Random song'):
+    songfile = random.choice(['blues00067.wav', 'hiphop00048.wav', 'pop00094.wav'])
+    y, sr = librosa.load(songfile)
+    try:
+        uploaded_file = None
+    except NameError:
+        pass
+
 if uploaded_file is not None:
     if uploaded_file.name.endswith('.mp3'):
         sound = AudioSegment.from_mp3(uploaded_file)
         sound.export('uploaded.wav', format="wav")
         y, sr = librosa.load('uploaded.wav')
+        st.audio('uploaded.wav')
         os.remove('uploaded.wav')
     else:
         y, sr = librosa.load(uploaded_file)
-    features = extract_features(y, sr)
+        st.audio(uploaded_file)
+else:
+    st.audio(songfile)
 
-    y_pred = modelxgb.predict_proba(features)[0]
+features = extract_features(y, sr)
+y_pred = modelxgb.predict_proba(features)[0]
 
 class_names = ['blues', 'classical', 'country', 'disco', 'hiphop', 'jazz', 'metal', 'pop', 'reggae', 'rock']
 
@@ -74,3 +89,5 @@ ax.spines['top'].set_color('#0e1117')
 ax.spines['right'].set_color('#0e1117')
 ax.tick_params(colors='white', which='both')
 st.pyplot(fig)
+
+st.write("All sample songs are taken from GTZAN Dataset [Kaggle link](https://www.kaggle.com/datasets/andradaolteanu/gtzan-dataset-music-genre-classification)")
