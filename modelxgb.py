@@ -6,7 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from xgboost import XGBClassifier
 
 df = pd.read_csv('features.csv')
-X = df.iloc[:, 1:-1].values
+X = df.iloc[:, :-1].values
 y = df.iloc[:, -1].values
 
 le = LabelEncoder()
@@ -20,4 +20,4 @@ y_pred = xgb.predict(X_test)
 
 print(accuracy_score(y_test, y_pred))
 
-xgb.save_model('modelxgb1.json')
+xgb.save_model('modelxgb.json')
