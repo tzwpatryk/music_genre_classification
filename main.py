@@ -52,9 +52,10 @@ with st.header('1. Upload your song in wav or mp3 format:'):
     uploaded_file = st.file_uploader('Upload your input wav or mp3 file', type=['mp3', 'wav'])
 
 songfile = 'hiphop00048.wav'
+songs = ['blues00048.wav', 'hiphop00048.wav', 'metal00099.wav']
 y, sr = librosa.load(songfile)
 if st.button('Random song'):
-    songfile = random.choice(['blues00048.wav', 'hiphop00048.wav', 'metal00099.wav'])
+    songfile = random.choice([s for s in songs if s != songfile])
     y, sr = librosa.load(songfile)
     try:
         uploaded_file = None
